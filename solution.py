@@ -19,8 +19,9 @@ EVALUATION_GRID_POINTS = 300  # Number of grid points used in extended evaluatio
 COST_W_UNDERPREDICT = 50.0
 COST_W_NORMAL = 1.0
 
-SAMPLE_AMOUNT = 0.25
-N_CLUSTERS = 100
+SAMPLE_AMOUNT = 0.5
+N_POINTS = 10
+N_CLUSTERS = N_POINTS**2
 
 
 class Model(object):
@@ -48,9 +49,6 @@ class Model(object):
         # self.grid_search = GridSearchCV(estimator=GaussianProcessRegressor(random_state=self.rng.integers(low=1, high=100), normalize_y=True), param_grid=par_space, return_train_score=True)
         kernel = RBF(length_scale=0.001)
         self.model = GaussianProcessRegressor(kernel=kernel, alpha=0.01, normalize_y=True)
-
-        # For clustering the location data
-        self.kmeans = MiniBatchKMeans(n_clusters=N_CLUSTERS, n_init="auto")
 
     def make_predictions(self, test_x_2D: np.ndarray, test_x_AREA: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -82,6 +80,15 @@ class Model(object):
         """
 
         # TODO: Fit your model here
+        lon_min = np.min(train_x_2D[:, 0])
+        lon_max = np.max(train_x_2D[:, 0])
+        lat_min = np.min(train_x_2D[:, 1])
+        lat_max = np.max(train_x_2D[:, 1])
+        grid = np.array(np.meshgrid(np.linspace(lon_min, lon_max, N_POINTS + 2)[1:-1], np.linspace(lat_min, lat_max, N_POINTS + 2)[1:-1])).T.reshape(-1, 2)
+
+        # For clustering the location data
+        self.kmeans = MiniBatchKMeans(n_clusters=N_CLUSTERS, init=grid, n_init="auto")
+
         indices = self.kmeans.fit_predict(train_x_2D)
         x_clusters = {}
         y_clusters = {}
